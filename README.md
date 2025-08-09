@@ -19,8 +19,6 @@ A **cross-platform system monitoring tool** that collects key system health data
 ## Project Overview
 
 System Utility continuously monitors endpoint machines by collecting information such as disk encryption status, OS update status, antivirus presence, and inactivity sleep timeout. The client utility sends periodic reports to a backend server, which stores data and provides an API. An admin dashboard presents this data interactively with filters by OS and system health status.
-
-
 ---
 
 ## Architecture & Flow
@@ -44,6 +42,7 @@ System Utility continuously monitors endpoint machines by collecting information
 ---
 
 ## Project Structure
+```
 /
 ├── utility-client/
 │ └── sysutil.py # Python client utility for data collection and reporting
@@ -58,14 +57,14 @@ System Utility continuously monitors endpoint machines by collecting information
 │ ├── package.json # React project metadata & dependencies
 │ └── ... # Other React files
 ├── README.md # Project documentation 
-
+```
 ---
 
-## ⚙️ Installation Steps
+## Installation & Setup
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/Mahadevan2005/AI-Merch-Maker-Lite.git
+git clone https://github.com/Mahadevan2005/Cross_Platform_System_Utility_Checker.git
 ```
 
 ### 2. Create & Activate Virtual Environment

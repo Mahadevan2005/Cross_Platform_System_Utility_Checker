@@ -102,6 +102,8 @@ cd admin-dashboard
 npm install
 npm run dev
 ```
+---
+
 ## Usage
 
 - The backend server receives and stores system reports securely using an API key.
@@ -109,7 +111,9 @@ npm run dev
 - The frontend dashboard provides real-time insight with filtering options by OS and system health issues.
 - Machines with issues (unencrypted disk, outdated OS, missing antivirus, or high inactivity timeout) are highlighted for easy identification.
 
-## 📸 Sample Screenshots
+---
+
+## Sample Screenshots
 ![Admin Dashboard](https://github.com/user-attachments/assets/216e5095-4ae7-4841-89b3-01318c9e00b3)
 
 <h3 align="center">

@@ -89,7 +89,7 @@ pip install -r requirements.txt
 ### 4. In terminal move into the directory "/backend-server" and start the server
 ```bash
 cd backend-server
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
+uvicorn main:app --reload --port 8000
 ```
 ### 5. In terminal move into the directory "utility-client" and start the process
 ```bash
@@ -114,7 +114,7 @@ npm run dev
 ---
 
 ## Sample Screenshots
-![Admin Dashboard](https://github.com/user-attachments/assets/216e5095-4ae7-4841-89b3-01318c9e00b3)
+![Admin Dashboard]()
 
 <h3 align="center">
 Thank You ❤️

@@ -114,7 +114,8 @@ npm run dev
 ---
 
 ## Sample Screenshots
-![Admin Dashboard]()
+![Admin Dashboard]("https://github.com/user-attachments/assets/ae1bb7a3-ac53-4579-9e6b-da8abed5bbf1")
+
 
 <h3 align="center">
 Thank You ❤️

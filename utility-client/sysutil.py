@@ -48,53 +48,75 @@ def check_disk_encryption():
         return False
 
 def check_os_update_status():
-    """Check if OS is up to date."""
+    """Check if OS is up to date for Windows, macOS, and Linux."""
     system = platform.system()
     try:
         if system == "Windows":
-            # Get current Windows version
+            # Use PowerShell to check for pending updates
+            ps_cmd = [
+                "powershell", "-Command",
+                "(New-Object -ComObject Microsoft.Update.Session).CreateUpdateSearcher().Search('IsInstalled=0').Updates.Count"
+            ]
+            output = subprocess.check_output(ps_cmd, text=True).strip()
+            pending = int(output)
             current_version = platform.version()
-            # For demo, assume latest version is same as current (replace with real check)
-            latest_version = current_version
-            is_up_to_date = True
             return {
                 "current_version": current_version,
-                "latest_version": latest_version,
-                "is_up_to_date": is_up_to_date
+                "latest_version": current_version if pending == 0 else "update available",
+                "is_up_to_date": (pending == 0)
             }
-        elif system == "Darwin":
-            # macOS version
-            current_version = subprocess.check_output(["sw_vers", "-productVersion"]).strip().decode()
-            # For demo, assume latest is same (replace with API or web scrape)
-            latest_version = current_version
-            is_up_to_date = True
+
+        elif system == "Darwin":  # macOS
+            output = subprocess.check_output(["softwareupdate", "-l"], text=True)
+            pending = "No new software available" not in output
+            current_version = subprocess.check_output(
+                ["sw_vers", "-productVersion"], text=True
+            ).strip()
             return {
                 "current_version": current_version,
-                "latest_version": latest_version,
-                "is_up_to_date": is_up_to_date
+                "latest_version": current_version if not pending else "update available",
+                "is_up_to_date": not pending
             }
+
         elif system == "Linux":
-            # This varies greatly — for demo, return true and current version
+            # Try apt first
+            try:
+                output = subprocess.check_output(
+                    ["apt", "list", "--upgradable"], stderr=subprocess.DEVNULL, text=True
+                )
+                pending = len(output.splitlines()) > 1
+            except FileNotFoundError:
+                # Try dnf
+                try:
+                    output = subprocess.check_output(
+                        ["dnf", "check-update"], stderr=subprocess.DEVNULL, text=True
+                    )
+                    pending = bool(output.strip())
+                except FileNotFoundError:
+                    pending = False
+
             current_version = platform.release()
-            latest_version = current_version
-            is_up_to_date = True
             return {
                 "current_version": current_version,
-                "latest_version": latest_version,
-                "is_up_to_date": is_up_to_date
+                "latest_version": current_version if not pending else "update available",
+                "is_up_to_date": not pending
             }
+
         else:
             return {
                 "current_version": "unknown",
                 "latest_version": "unknown",
                 "is_up_to_date": False
             }
-    except Exception:
+
+    except Exception as e:
         return {
             "current_version": "error",
             "latest_version": "error",
-            "is_up_to_date": False
+            "is_up_to_date": False,
+            "error": str(e)
         }
+
 
 def check_antivirus():
     """Detect antivirus presence and status."""
@@ -122,35 +144,46 @@ def check_antivirus():
             "status": "error"
         }
 
+import re
+import subprocess
+import platform
+
+import subprocess
+import re
+
 def check_inactivity_sleep():
-    """Check inactivity sleep settings in minutes."""
-    system = platform.system()
     try:
-        if system == "Windows":
-            output = subprocess.check_output(["powercfg", "/query"]).decode()
-            # Find setting for sleep timeout on AC power (subgroup GUID: 238C9FA8-0AAD-41ED-83F4-97BE242C8F20, setting: 29F6C1DB-86DA-48C5-9FDB-F2B67B1F44DA)
-            import re
-            match = re.search(r"Sleep Timeout \(AC\):\s*Power Setting Index: 0x(\w+)", output)
-            if match:
-                val = int(match.group(1), 16)
-                return val // 60  # seconds to minutes
-            else:
-                return 9999
-        elif system == "Darwin":
-            output = subprocess.check_output(["pmset", "-g"]).decode()
-            import re
-            match = re.search(r"sleep\s+(\d+)", output)
-            if match:
-                return int(match.group(1))
-            else:
-                return 9999
-        elif system == "Linux":
-            # For demo, assume 10 mins or less
-            return 10
+        # Get the active power scheme
+        scheme_output = subprocess.check_output(
+            ["powercfg", "/getactivescheme"], text=True
+        )
+        scheme_guid = re.search(r"([0-9a-fA-F\-]{36})", scheme_output).group(1)
+
+        # Query AC and DC values
+        query_output = subprocess.check_output(
+            ["powercfg", "/query", scheme_guid, "SUB_SLEEP", "STANDBYIDLE"],
+            text=True
+        )
+
+        # Extract AC and DC values from hex to int (seconds)
+        ac_match = re.search(r"Current AC Power Setting Index:\s*0x([0-9a-fA-F]+)", query_output)
+        dc_match = re.search(r"Current DC Power Setting Index:\s*0x([0-9a-fA-F]+)", query_output)
+
+        ac_seconds = int(ac_match.group(1), 16) if ac_match else None
+        dc_seconds = int(dc_match.group(1), 16) if dc_match else None
+
+        # Convert to minutes, pick the smallest non-None value
+        time_values = [t for t in [ac_seconds, dc_seconds] if t is not None]
+        if time_values:
+            min_seconds = min(time_values)
+            return min_seconds // 60  # Convert to minutes
         else:
-            return 9999
-    except Exception:
-        return 9999
+            return None
+
+    except Exception as e:
+        print(f"Error checking sleep timeout: {e}")
+        return None
+
 
 def load_cache():
     if os.path.exists(CACHE_FILE):
@@ -203,6 +236,7 @@ def main_loop():
         print(f"Checking system status at {datetime.now()}")
         new_data = collect_data()
         old_data = load_cache()
+        print(new_data)
         if data_changed(new_data, old_data):
             print("Change detected, sending report...")
             if send_report(new_data):

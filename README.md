@@ -63,17 +63,17 @@ System Utility continuously monitors endpoint machines by collecting information
 
 ## Installation & Setup
 
-### 1. Clone the Repository
+### 1. Clone the repository
 ```bash
 git clone https://github.com/Mahadevan2005/Cross_Platform_System_Utility_Checker.git
 ```
 
-### 2. Create & Activate Virtual Environment
+### 2. Create & activate virtual environment
 - #### Create Virtual Environment
 ```bash
 python -m venv venv
 ```
-- #### Activate Virtual Environment
+- ### Activate virtual environment
 For Linux/macOS:
 ```
 source venv/bin/activate
@@ -82,7 +82,7 @@ For Windows:
 ```
 venv\\Scripts\\activate
 ```
-### 3. Install Required Backend Package Dependencies
+### 3. Install required backend package dependencies
 ```bash
 pip install -r requirements.txt
 ```

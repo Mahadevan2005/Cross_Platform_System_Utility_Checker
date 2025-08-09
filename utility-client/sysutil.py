@@ -152,38 +152,72 @@ import subprocess
 import re
 
 def check_inactivity_sleep():
+    system = platform.system()
+
     try:
-        # Get the active power scheme
-        scheme_output = subprocess.check_output(
-            ["powercfg", "/getactivescheme"], text=True
-        )
-        scheme_guid = re.search(r"([0-9a-fA-F\-]{36})", scheme_output).group(1)
+        if system == "Windows":
+            # ===== Windows: use powercfg =====
+            scheme_output = subprocess.check_output(
+                ["powercfg", "/getactivescheme"], text=True
+            )
+            scheme_guid = re.search(r"([0-9a-fA-F\-]{36})", scheme_output).group(1)
 
-        # Query AC and DC values
-        query_output = subprocess.check_output(
-            ["powercfg", "/query", scheme_guid, "SUB_SLEEP", "STANDBYIDLE"],
-            text=True
-        )
+            query_output = subprocess.check_output(
+                ["powercfg", "/query", scheme_guid, "SUB_SLEEP", "STANDBYIDLE"],
+                text=True
+            )
 
-        # Extract AC and DC values from hex to int (seconds)
-        ac_match = re.search(r"Current AC Power Setting Index:\s*0x([0-9a-fA-F]+)", query_output)
-        dc_match = re.search(r"Current DC Power Setting Index:\s*0x([0-9a-fA-F]+)", query_output)
+            ac_match = re.search(r"Current AC Power Setting Index:\s*0x([0-9a-fA-F]+)", query_output)
+            dc_match = re.search(r"Current DC Power Setting Index:\s*0x([0-9a-fA-F]+)", query_output)
 
-        ac_seconds = int(ac_match.group(1), 16) if ac_match else None
-        dc_seconds = int(dc_match.group(1), 16) if dc_match else None
+            ac_seconds = int(ac_match.group(1), 16) if ac_match else None
+            dc_seconds = int(dc_match.group(1), 16) if dc_match else None
 
-        # Convert to minutes, pick the smallest non-None value
-        time_values = [t for t in [ac_seconds, dc_seconds] if t is not None]
-        if time_values:
-            min_seconds = min(time_values)
-            return min_seconds // 60  # Convert to minutes
+            time_values = [t for t in [ac_seconds, dc_seconds] if t is not None]
+            return min(time_values) // 60 if time_values else None
+
+        elif system == "Darwin":
+            # ===== macOS: use pmset =====
+            output = subprocess.check_output(["pmset", "-g", "custom"], text=True)
+
+            ac_match = re.search(r" sleep\s+(\d+)", output)
+            dc_match = re.search(r" sleep\s+(\d+)", output)
+
+            ac_minutes = int(ac_match.group(1)) if ac_match else None
+            dc_minutes = int(dc_match.group(1)) if dc_match else None
+
+            time_values = [t for t in [ac_minutes, dc_minutes] if t is not None]
+            return min(time_values) if time_values else None
+
+        elif system == "Linux":
+            # ===== Linux: try gsettings (GNOME) =====
+            try:
+                ac_timeout = subprocess.check_output(
+                    ["gsettings", "get", "org.gnome.settings-daemon.plugins.power", "sleep-inactive-ac-timeout"],
+                    text=True
+                ).strip()
+                ac_minutes = int(ac_timeout) // 60 if ac_timeout.isdigit() else None
+            except Exception:
+                ac_minutes = None
+
+            try:
+                dc_timeout = subprocess.check_output(
+                    ["gsettings", "get", "org.gnome.settings-daemon.plugins.power", "sleep-inactive-battery-timeout"],
+                    text=True
+                ).strip()
+                dc_minutes = int(dc_timeout) // 60 if dc_timeout.isdigit() else None
+            except Exception:
+                dc_minutes = None
+
+            time_values = [t for t in [ac_minutes, dc_minutes] if t is not None]
+            return min(time_values) if time_values else None
+
         else:
             return None
 
     except Exception as e:
-        print(f"Error checking sleep timeout: {e}")
+        print(f"Error checking sleep timeout on {system}: {e}")
         return None
-
 
 def load_cache():
     if os.path.exists(CACHE_FILE):
@@ -236,7 +270,7 @@ def main_loop():
         print(f"Checking system status at {datetime.now()}")
         new_data = collect_data()
         old_data = load_cache()
-        print(new_data)
+        # print(new_data)
         if data_changed(new_data, old_data):
             print("Change detected, sending report...")
             if send_report(new_data):

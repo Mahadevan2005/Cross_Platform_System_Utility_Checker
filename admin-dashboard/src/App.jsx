@@ -25,11 +25,15 @@ import {
   TablePagination,
   Chip,
   CircularProgress,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Stack,
 } from "@mui/material";
 
 import MenuIcon from "@mui/icons-material/Menu";
 import DashboardIcon from "@mui/icons-material/Dashboard";
-import SettingsIcon from "@mui/icons-material/Settings";
 
 const drawerWidth = 240;
 const API_URL = "http://localhost:8000/api/machines";
@@ -86,6 +90,10 @@ export default function Dashboard() {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
+  // New state for filters
+  const [filterOS, setFilterOS] = useState("");
+  const [filterStatus, setFilterStatus] = useState("all"); // "all", "issues", "clean"
+
   const toggleDrawer = () => {
     setMobileOpen(!mobileOpen);
   };
@@ -128,11 +136,25 @@ export default function Dashboard() {
     setPage(0);
   };
 
+  // Filtering the machines list before sorting and pagination
+  const filteredMachines = machines.filter((m) => {
+    const matchesOS = filterOS ? m.os_type.toLowerCase() === filterOS.toLowerCase() : true;
+
+    let matchesStatus = true;
+    if (filterStatus === "issues") {
+      matchesStatus = hasIssues(m);
+    } else if (filterStatus === "clean") {
+      matchesStatus = !hasIssues(m);
+    }
+
+    return matchesOS && matchesStatus;
+  });
+
   const drawer = (
     <div>
       <Toolbar>
         <Typography variant="h6" noWrap component="div">
-          Solsphere Admin
+          Admin Dashboard
         </Typography>
       </Toolbar>
       <Divider />
@@ -142,12 +164,6 @@ export default function Dashboard() {
             <DashboardIcon />
           </ListItemIcon>
           <ListItemText primary="Dashboard" />
-        </ListItem>
-        <ListItem button disabled>
-          <ListItemIcon>
-            <SettingsIcon />
-          </ListItemIcon>
-          <ListItemText primary="Settings" />
         </ListItem>
       </List>
     </div>
@@ -176,7 +192,7 @@ export default function Dashboard() {
             <MenuIcon />
           </IconButton>
           <Typography variant="h6" noWrap component="div">
-            Solsphere System Dashboard
+            Welcome Admin !!
           </Typography>
         </Toolbar>
       </AppBar>
@@ -224,6 +240,39 @@ export default function Dashboard() {
         }}
       >
         <Container maxWidth="lg">
+
+          {/* Filter Controls */}
+          <Stack direction="row" spacing={2} mb={3}>
+            <FormControl size="small" sx={{ minWidth: 120 }}>
+              <InputLabel id="filter-os-label">OS Type</InputLabel>
+              <Select
+                labelId="filter-os-label"
+                value={filterOS}
+                label="OS Type"
+                onChange={(e) => setFilterOS(e.target.value)}
+              >
+                <MenuItem value="">All</MenuItem>
+                <MenuItem value="Windows">Windows</MenuItem>
+                <MenuItem value="Linux">Linux</MenuItem>
+                <MenuItem value="Darwin">macOS</MenuItem>
+              </Select>
+            </FormControl>
+
+            <FormControl size="small" sx={{ minWidth: 140 }}>
+              <InputLabel id="filter-status-label">Status</InputLabel>
+              <Select
+                labelId="filter-status-label"
+                value={filterStatus}
+                label="Status"
+                onChange={(e) => setFilterStatus(e.target.value)}
+              >
+                <MenuItem value="all">All</MenuItem>
+                <MenuItem value="issues">With Issues</MenuItem>
+                <MenuItem value="clean">Clean</MenuItem>
+              </Select>
+            </FormControl>
+          </Stack>
+
           {/* Summary Cards */}
           <Grid container spacing={3} mb={4}>
             <Grid item xs={12} md={4}>
@@ -231,7 +280,7 @@ export default function Dashboard() {
                 <Typography variant="h6" gutterBottom>
                   Total Machines
                 </Typography>
-                <Typography variant="h4">{machines.length}</Typography>
+                <Typography variant="h4">{filteredMachines.length}</Typography>
               </Paper>
             </Grid>
             <Grid item xs={12} md={4}>
@@ -240,7 +289,7 @@ export default function Dashboard() {
                   Machines with Issues
                 </Typography>
                 <Typography variant="h4">
-                  {machines.filter((m) => hasIssues(m)).length}
+                  {filteredMachines.filter((m) => hasIssues(m)).length}
                 </Typography>
               </Paper>
             </Grid>
@@ -250,7 +299,7 @@ export default function Dashboard() {
                   Clean Machines
                 </Typography>
                 <Typography variant="h4">
-                  {machines.filter((m) => !hasIssues(m)).length}
+                  {filteredMachines.filter((m) => !hasIssues(m)).length}
                 </Typography>
               </Paper>
             </Grid>
@@ -298,7 +347,7 @@ export default function Dashboard() {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {stableSort(machines, getComparator(order, orderBy))
+                      {stableSort(filteredMachines, getComparator(order, orderBy))
                         .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                         .map((m) => {
                           const issue = hasIssues(m);
@@ -337,7 +386,7 @@ export default function Dashboard() {
                 </TableContainer>
                 <TablePagination
                   component="div"
-                  count={machines.length}
+                  count={filteredMachines.length}
                   page={page}
                   onPageChange={handleChangePage}
                   rowsPerPage={rowsPerPage}

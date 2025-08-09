@@ -19,6 +19,7 @@ A **cross-platform system monitoring tool** that collects key system health data
 ## Project Overview
 
 System Utility continuously monitors endpoint machines by collecting information such as disk encryption status, OS update status, antivirus presence, and inactivity sleep timeout. The client utility sends periodic reports to a backend server, which stores data and provides an API. An admin dashboard presents this data interactively with filters by OS and system health status.
+
 ---
 
 ## Architecture & Flow
